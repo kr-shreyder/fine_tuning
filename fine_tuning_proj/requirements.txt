@@ -14,3 +14,9 @@ scikit-learn
 tqdm
 typer
 -e .
+torch
+torchvision
+timm
+onnx
+onnxruntime
+gradio
