@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-# Функция для построения кривых обучения [cite: 6]
 def plot_learning_curves(history, model_name):
     """Строит графики потерь и точности по эпохам."""
     
@@ -28,7 +27,7 @@ def plot_learning_curves(history, model_name):
     plt.tight_layout()
     plt.show()
 
-# Функция для построения матрицы ошибок [cite: 26]
+# Функция для построения матрицы ошибок
 def plot_confusion_matrix(y_true, y_pred, class_names, model_name):
     """Строит матрицу ошибок."""
     
