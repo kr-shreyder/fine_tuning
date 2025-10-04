@@ -1,29 +1,45 @@
-from pathlib import Path
+import os
+import torchvision.transforms as T
+from torchvision.datasets import ImageFolder
+from torch.utils.data import DataLoader
+from .config import DataConfig # Импорт вашей новой конфигурации
 
-from loguru import logger
-from tqdm import tqdm
-import typer
+def get_transforms(cfg: DataConfig):
+    """Определяет трансформации с аугментацией для train и без для val/test."""
+    # Среднее и стандартное отклонение для нормализации ImageNet [cite: 20]
+    NORMALIZE_MEAN = [0.485, 0.456, 0.406]
+    NORMALIZE_STD = [0.229, 0.224, 0.225]
 
-from fine_tuning_proj.config import PROCESSED_DATA_DIR, RAW_DATA_DIR
+    # 1. Трансформации для обучения (с аугментацией) [cite: 24]
+    train_transforms = T.Compose([
+        T.RandomResizedCrop(cfg.IMG_SIZE), # Аугментация
+        T.RandomHorizontalFlip(),          # Аугментация
+        T.ToTensor(),
+        T.Normalize(NORMALIZE_MEAN, NORMALIZE_STD)
+    ])
 
-app = typer.Typer()
+    # 2. Трансформации для валидации/теста (без аугментации) [cite: 32]
+    # Используются те же шаги, что и для инференса, чтобы избежать отклонений
+    val_test_transforms = T.Compose([
+        T.Resize(256),                     # Изменение размера
+        T.CenterCrop(cfg.IMG_SIZE),        # Кадрирование до 224x224
+        T.ToTensor(),
+        T.Normalize(NORMALIZE_MEAN, NORMALIZE_STD)
+    ])
+    
+    return train_transforms, val_test_transforms
 
+def get_dataloaders(cfg: DataConfig, train_transforms, val_test_transforms, batch_size: int):
+    """Создает DataLoader для train, val и test."""
+    
+    # ImageFolder автоматически считывает классы из имен папок в data/raw/train, val, test
+    train_data = ImageFolder(os.path.join(cfg.DATA_DIR_RAW, 'train'), transform=train_transforms)
+    val_data = ImageFolder(os.path.join(cfg.DATA_DIR_RAW, 'val'), transform=val_test_transforms)
+    test_data = ImageFolder(os.path.join(cfg.DATA_DIR_RAW, 'test'), transform=val_test_transforms)
+    
+    # Создание DataLoader'ов
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=2)
+    val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=2)
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, num_workers=2)
 
-@app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    input_path: Path = RAW_DATA_DIR / "dataset.csv",
-    output_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    # ----------------------------------------------
-):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Processing dataset...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Processing dataset complete.")
-    # -----------------------------------------
-
-
-if __name__ == "__main__":
-    app()
+    return train_loader, val_loader, test_loader

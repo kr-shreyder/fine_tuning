@@ -1,32 +1,43 @@
 from pathlib import Path
-
+from dataclasses import dataclass, field
 from dotenv import load_dotenv
 from loguru import logger
 
 # Load environment variables from .env file if it exists
 load_dotenv()
 
-# Paths
+# --- PATHS ---
 PROJ_ROOT = Path(__file__).resolve().parents[1]
-logger.info(f"PROJ_ROOT path is: {PROJ_ROOT}")
-
 DATA_DIR = PROJ_ROOT / "data"
-RAW_DATA_DIR = DATA_DIR / "raw"
-INTERIM_DATA_DIR = DATA_DIR / "interim"
-PROCESSED_DATA_DIR = DATA_DIR / "processed"
-EXTERNAL_DATA_DIR = DATA_DIR / "external"
 
-MODELS_DIR = PROJ_ROOT / "models"
+# --- DATACLASSES ---
 
-REPORTS_DIR = PROJ_ROOT / "reports"
-FIGURES_DIR = REPORTS_DIR / "figures"
+@dataclass
+class GlobalConfig:
+    """Общие настройки и сиды."""
+    SEED: int = 42                                     # Фиксация генераторов случайных чисел [cite: 8, 14]
+    
+@dataclass
+class DataConfig:
+    """Конфигурация данных и путей."""
+    # Путь к папке raw, где лежат train/val/test
+    DATA_DIR_RAW: str = str(DATA_DIR / "raw")
+    IMG_SIZE: int = 224                                # Стандартный размер входа для ImageNet-моделей [cite: 20]
+    NUM_CLASSES: int = 3
+    
+@dataclass
+class ModelConfig:
+    """Конфигурация моделей и экспорта ONNX."""
+    MODEL_1_NAME: str = 'resnet18'                     # Модель 1: CNN [cite: 23]
+    MODEL_2_NAME: str = 'vit_base_patch16_224'         # Модель 2: Transformer [cite: 23]
+    PRETRAINED: bool = True
+    ONNX_PATH: str = str(PROJ_ROOT / "app" / "model.onnx") # Путь для экспорта в папку 'app' [cite: 29]
 
-# If tqdm is installed, configure loguru with tqdm.write
-# https://github.com/Delgan/loguru/issues/135
-try:
-    from tqdm import tqdm
-
-    logger.remove(0)
-    logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
-except ModuleNotFoundError:
-    pass
+@dataclass
+class TrainConfig:
+    """Гиперпараметры для обучения."""
+    EPOCHS: int = 15
+    BATCH_SIZE: int = 32
+    LEARNING_RATE: float = 1e-4
+    OPTIMIZER: str = 'AdamW'
+    FREEZE_STRATEGY_DESC: str = 'Двухэтапное дообучение: Head, затем разморозка последних слоев'
